@@ -49,23 +49,23 @@ devEnv = (os.getenv("ENVIRONMENT") == "dev")
 
 
 def getFiltro() -> Callable[[scraper.Verbete], bool]:
-    msg = "Extração padrão..."
-
     if args.unico:
-        msg = "Extraíndo verbetes com contribuidor único..."
-        lFiltro = scraper.filtroContribuidores
+        return scraper.filtroContribuidores
     elif args.comentarios:
-        msg = "Extraíndo verbetes sem comentários de revisão..."
-        lFiltro = scraper.filtroComentarios
-    else:
-        def lFiltro(v: scraper.Verbete) -> bool: return True
+        return scraper.filtroComentarios
 
-    if devEnv:
-        print(msg)
-    return lFiltro
+    return lambda v: True
 
 
 def main():
+    if devEnv:
+        if args.comentarios:
+            print("Extraíndo verbetes sem comentários de revisão...")
+        elif args.unico:
+            print("Extraíndo verbetes com contribuidor único...")
+        else:
+            print("Extração padrão...")
+
     if args.lista:
         dfArtigos = pd.read_csv(args.lista)
     else:
@@ -104,6 +104,8 @@ def main():
                             .replace("Categoria:", "")
                             for categoria in infos.Categorias
                         ]),
+                    "Número de contribuidores do verbete":
+                    infos.NumContribuidores,
                     "Usuário": contribuicao["user"],
                     "Funções": ", ".join(contribuicao["roles"]),
                     "Tags": ", ".join(contribuicao["tags"]),

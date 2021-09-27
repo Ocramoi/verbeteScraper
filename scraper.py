@@ -81,8 +81,6 @@ def scrapeVerbete(
         titulo: str,
         filtro: Callable[[object], bool]
 ) -> Union[Verbete, None]:
-    if devEnv:
-        print(f'Extraíndo informação do artigo "{titulo}"...')
     page = requests.get(API_ENDPOINT
                         .format(tituloArtigo=parse.quote(titulo)))
     try:
@@ -108,9 +106,12 @@ def scrapeVerbete(
         if devEnv:
             print(f'Categorias mal definidas em "{titulo}"!')
         categorias = []
-    nContributors = listagem["anoncontributors"] + len(
+
+    nContributors = len(
         listagem["contributors"]
     )
+    if "anoncontributors" in list(listagem.keys()):
+        nContributors += listagem["anoncontributors"]
 
     extraido = Verbete(
         Titulo=titulo,
@@ -120,5 +121,7 @@ def scrapeVerbete(
     )
 
     if filtro(extraido):
+        if devEnv:
+            print(f'Extraíndo informação do artigo "{titulo}"...')
         return extraido
     return False
