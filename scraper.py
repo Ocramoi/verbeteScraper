@@ -11,7 +11,7 @@ from dataclasses import dataclass
 load_dotenv()
 devEnv = (os.getenv("ENVIRONMENT") == "dev")
 API_ENDPOINT = "https://pt.wikipedia.org/w/api.php?action=query&prop=revisions%7Ccategories%7Ccontributors&titles={tituloArtigo}&rvprop=user%7Ccomment%7Ctags%7Croles%7Ctags%7Ccontent%7Ctimestamp&rvslots=*&rvlimit=max&format=json&continue="
-MATRIZ_BRASIL = "https://ptwikis.toolforge.org/Matriz:Brasil&q{qualidade}i{importancia}"
+MATRIZ_BRASIL = "https://ptwikis.toolforge.org/Matriz:{matriz}&q{qualidade}i{importancia}"
 
 
 @dataclass
@@ -35,6 +35,7 @@ def filtroContribuidores(v: Verbete) -> bool:
 
 def geraLista(
         maxArtigos: Union[str, int] = int(os.getenv("NUM_CLASSIFICACAO")),
+        matrizes: [str] = ["Brasil"]
 ):
     if devEnv:
         print("Criando lista de artigos...")
@@ -44,31 +45,33 @@ def geraLista(
         "class": "ext"
     }
     dataLista = []
-    for q in range(int(os.getenv("MAX_QUALIDADE"))):
-        for i in range(int(os.getenv("MAX_IMPORTANCIA"))):
-            pagMatriz = requests.get(MATRIZ_BRASIL
-                                     .format(
-                                         qualidade=q + 1,
-                                         importancia=i + 1
-                                     ))
-            soup = BeautifulSoup(pagMatriz.content, "html.parser")
-            links = soup.findAll(
-                ELEMENTO_ARTIGOS,
-                SELETOR_ARTIGOS
-            )[::3]
-            if maxArtigos != 'max':
-                rands = random.sample(
-                    links,
-                    maxArtigos
-                )
-            else:
-                rands = links
-            for a in rands:
-                dataLista.append({
-                    "Nome": a.text,
-                    "Qualidade": q + 1,
-                    "Importância": i + 1
-                })
+    for matriz in matrizes:
+        for q in range(int(os.getenv("MAX_QUALIDADE"))):
+            for i in range(int(os.getenv("MAX_IMPORTANCIA"))):
+                pagMatriz = requests.get(MATRIZ_BRASIL
+                                         .format(
+                                             matriz=matriz,
+                                             qualidade=q + 1,
+                                             importancia=i + 1
+                                         ))
+                soup = BeautifulSoup(pagMatriz.content, "html.parser")
+                links = soup.findAll(
+                    ELEMENTO_ARTIGOS,
+                    SELETOR_ARTIGOS
+                )[::3]
+                if maxArtigos != 'max':
+                    rands = random.sample(
+                        links,
+                        min(maxArtigos, len(links))
+                    )
+                else:
+                    rands = links
+                for a in rands:
+                    dataLista.append({
+                        "Nome": a.text,
+                        "Qualidade": q + 1,
+                        "Importância": i + 1
+                    })
     if devEnv:
         print("Lista de artigos criada!")
 

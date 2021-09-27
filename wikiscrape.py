@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 
 import os
-import requests
 import pandas as pd
 import argparse
-from urllib import parse
 from dotenv import load_dotenv
 import concurrent.futures
-from bs4 import BeautifulSoup
-import random
 from typing import Callable
 
 import scraper
@@ -26,6 +22,14 @@ parser.add_argument('-l',
                     action="store",
                     help="Arquivo CSV contendo os artigos dos quais as \
                     informações devem ser extraídas.")
+parser.add_argument('-m',
+                    '--matrizes',
+                    type=str,
+                    required=False,
+                    action="store",
+                    help="Arquivo de texto com a lista de temas das matrizes \
+                    das quais extrair artigos, separadas linha a linha. Por \
+                    padrão, apenas 'Brasil'.")
 parser.add_argument('-s',
                     '--saida',
                     type=str,
@@ -57,6 +61,15 @@ def getFiltro() -> Callable[[scraper.Verbete], bool]:
     return lambda v: True
 
 
+def getMatrizes() -> [str]:
+    if not args.matrizes:
+        return ["Brasil"]
+
+    with open(args.matrizes) as arqM:
+        ms = arqM.readlines()
+    return [m.strip() for m in ms]
+
+
 def main():
     if devEnv:
         if args.comentarios:
@@ -65,6 +78,7 @@ def main():
             print("Extraíndo verbetes com contribuidor único...")
         else:
             print("Extração padrão...")
+    dataSaida = []
 
     if args.lista:
         dfArtigos = pd.read_csv(args.lista)
@@ -73,10 +87,14 @@ def main():
             mArts = "max"
         else:
             mArts = int(os.getenv("NUM_CLASSIFICACAO"))
-        dfArtigos = scraper.geraLista(mArts)
+        matrizes = getMatrizes()
+
+        dfArtigos = scraper.geraLista(
+            maxArtigos=mArts,
+            matrizes=matrizes
+        )
         if devEnv:
             dfArtigos.to_csv("listaGerada.csv")
-    dataSaida = []
 
     for idx, verbete in dfArtigos.iterrows():
         infos = scraper.scrapeVerbete(
